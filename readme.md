@@ -15,16 +15,16 @@ The usefull information is in the two .json files.
 * the flags use ISO 3166 as a base; French and Netherlands which have there own code have their own flags (there is no need to have duplicates),
 * The flags are coded using only 10 colors:
     * -1 : ▢ no color,
-    * 0 : <span style="color:#333">■</span> black,
-    * 1 : <span style="color:#812">■</span> brown,
-    * 2 : <span style="color:#f03">■</span> red,
-    * 3 : <span style="color:#f60">■</span> orange,
-    * 4 : <span style="color:#fb0">■</span> yellow,
-    * 5 : <span style="color:#190">■</span> green,
-    * 6 : <span style="color:#0af">■</span> light blue,
-    * 7 : <span style="color:#02d">■</span> dark blue,
-    * 8 : <span style="color:#888">■</span> gray,
-    * 9 : <span style="color:#fff">■</span> white.
+    * 0 : $\color{#333}{\textsf{■}}$ black,
+    * 1 : $\color{#812}{\textsf{■}}$ brown,
+    * 2 : $\color{#f03}{\textsf{■}}$ red,
+    * 3 : $\color{#f60}{\textsf{■}}$ orange,
+    * 4 : $\color{#fb0}{\textsf{■}}$ yellow,
+    * 5 : $\color{#190}{\textsf{■}}$ green,
+    * 6 : $\color{#0af}{\textsf{■}}$ light blue,
+    * 7 : $\color{#02d}{\textsf{■}}$ dark blue,
+    * 8 : $\color{#888}{\textsf{■}}$ gray,
+    * 9 : $\color{#fff}{\textsf{■}}$ white.
 
 ## Disclaimers
 * I only know how to read English, French, Spanish, and some latin-based writings.
