@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Controls</title>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      padding: 16px;
+    }
+
+    textarea {
+      padding: 8px;
+    }
+
+    #output {
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 10px;
+      overflow: auto;
+      resize: both;
+      min-height: 120px;
+      min-width: 325px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: x-small;
+      line-height: 1.5;
+      margin-top: 10px;
+    }
+
+    button {
+      margin: 6px;
+      padding: 10px 14px;
+      font-size: 16px;
+    }
+
+    .row {
+      margin: 10px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="row">
+    <button id="btnConnect">Connect to COM</button>
+    <button id="btnDisconnect" onClick="window.location.reload();" style="color:gray" disabled>Disconnect COM</button>
+    <br>
+    <label for="brightness">Brightness</label>
+    <input type="range" id="brightness" min="0" max="255" value="127" disabled>
+    <br>
+    <button id="btnHeure" disabled>Display Time</button>
+
+
+    <div>
+      <textarea id="txt" placeholder="Write something..." rows="1" cols="26" disabled></textarea>
+      <br>
+      <button id="btnDefiler" disabled>Scroll the text</button>
+
+
+    </div>
+    
+
+    <div>
+      <label for="itemSelect">Choose a flag:</label>
+      <br>
+      <select id="itemSelect" name="item" size="10"></select>
+      <br>
+      <button id="btnFlag" disabled>Display Flag</button>
+    </div>
+  </div>
+
+
+  <div>
+    <b>Output</b>
+    <div id=output></div>
+  </div>
+
+  <div>
+    <textarea id="txtbrute1" placeholder="Write something..." rows="1" cols="26" disabled></textarea>
+    <button id="btnBrut1" disabled>Brut 1</button>
+    <textarea id="txtbrute2" placeholder="Write something..." rows="1" cols="26" disabled></textarea>
+    <button id="btnBrut2" disabled>Brut 2</button>
+    <textarea id="txtbrute3" placeholder="Write something..." rows="1" cols="26" disabled></textarea>
+    <button id="btnBrut3" disabled>Brut 3</button>
+
+  </div>
+
+  <script>
+
+    function toHexCodePoint(code) {
+      return code.toString(16).toUpperCase().padStart(4, "0");
+    }
+
+    function stringToUnicodeCodePoint(str) {
+      const codePoints = [];
+
+      for (let i = 0; i < str.length; i++) {
+        let codeUnit = str.charCodeAt(i);
+        if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
+          let lowSurrogate = str.charCodeAt(i + 1);
+          let codePoint = (codeUnit - 0xd800) * 0x400 + (lowSurrogate - 0xdc00) + 0x10000;
+          codePoints.push(codePoint);
+          i++;
+        } else {
+          codePoints.push(codeUnit);
+        }
+      }
+      return codePoints;
+    }
+
+    const input = document.getElementById('txt');
+
+    const inputBrut1 = document.getElementById('txtbrute1');
+    const inputBrut2 = document.getElementById('txtbrute2');
+    const inputBrut3 = document.getElementById('txtbrute3');
+
+    function getJSON(addr) {
+      const xhr = new XMLHttpRequest();
+      xhr.open("GET", addr, false);
+      xhr.send(null);
+      return JSON.parse(xhr.responseText);
+    }
+
+
+
+    let FONT_5X7 = getJSON("unicode.json");
+    const tableau = getJSON("flags.json");
+
+
+    const flagPalette = {
+      "-1": '0',
+      0: 'o',
+      1: 'a',
+      2: 'b',
+      3: 'c',
+      4: 'd',
+      5: 'e',
+      6: 'f',
+      7: 'g',
+      8: 'h',
+      9: 'i'
+    };
+
+    function flagCodeToStringRGB(flag) {
+      let output = "";
+      for (let row = 0; row < 7; row++) {
+        for (let col = 0; col < 5; col++) {
+          output = output.concat(flagPalette[tableau[flag]["flag"][row][col]]);
+        }
+      }
+      for (let row = 0; row < 7; row++) {
+        for (let col = 5; col < 10; col++) {
+          output = output.concat(flagPalette[tableau[flag]["flag"][row][col]]);
+        }
+      }
+      return output;
+    }
+
+    function getGlyph(char, type) {
+      let glyph = FONT_5X7[toHexCodePoint(char)];
+      let glyphout = "";
+      if (type == 'm') {
+        glyph.forEach((row, x) => {
+          row.forEach((col, y) => {
+            glyphout = glyphout.concat(col == 1 ? 'z' : '0');
+          })
+        });
+      } else {
+        for (let j = 0; j < 12; j++) {
+          let row0 = Math.floor((j * 3) / 5);
+          let col0 = (j * 3) % 5;
+          let row1 = Math.floor((j * 3 + 1) / 5);
+          let col1 = (j * 3 + 1) % 5;
+          let row2 = Math.floor((j * 3 + 2) / 5);
+          let col2 = (j * 3 + 2) % 5;
+
+          let caseNum = (glyph[row0][col0] << 2) | (glyph[row1][col1] << 1) | glyph[row2]?.[col2] ?? 0;
+
+          glyphout = glyphout.concat(`${caseNum}`);
+        }
+      }
+      return glyphout;
+    }
+
+
+    const lineConfig = "m2,o1,m1,o1,m1,o1,m1,o1";
+    let currentMatrixType = lineConfig[0];
+    let currentMatrixStart = 0;
+
+    function setCurrentMatrix(position) {
+      let i = 0;
+      let firstpos = -1;
+      let secondpos = lineConfig.indexOf(',');
+      let count = -1;
+
+      currentMatrixType = lineConfig[firstpos + 1];
+      currentMatrixStart = 0;
+
+      while (i < 30 && count < position) {
+        let numberoftype = parseInt(lineConfig.substring(firstpos + 2, secondpos));
+
+        count += numberoftype;
+        currentMatrixType = lineConfig[firstpos + 1];
+
+        if (count < position && currentMatrixType == 'm') currentMatrixStart += 35 * numberoftype;
+        if (count < position && currentMatrixType == 'o') currentMatrixStart += 12 * numberoftype;
+        if (count >= position && currentMatrixType == 'm') currentMatrixStart += 35 * (position - count + numberoftype - 1);
+        if (count >= position && currentMatrixType == 'o') currentMatrixStart += 12 * (position - count + numberoftype - 1);
+
+        firstpos = secondpos;
+        secondpos = lineConfig.indexOf(',', firstpos + 1);
+        i++;
+      }
+    }
+
+
+    async function renderText(text) {
+      let renderedText = "";
+      await sendPacket(1, 0, "\x22");
+      if (text.length != 0) {
+        for (let i = 0; i < 10; i++) {
+          if (text[i] == undefined) continue;
+          let glyphout;
+          setCurrentMatrix(i);
+          glyphout = getGlyph(text[i] ?? " ", currentMatrixType);
+          await sendPacket(currentMatrixType == "m" ? 35 : 12, currentMatrixStart, glyphout);
+
+          renderedText = renderedText.concat(glyphout);
+        };
+      }
+      await sendPacket(1, 0, "\x11");
+      return renderedText;
+    }
+
+    async function renderFlag(text) {
+      const textA = (text.slice(0, 35)).split("").reverse().join("");;
+      const textB = text.slice(35, 70);
+
+      await sendPacket(1, 0, "\x22");
+      await sendPacket(35, 0, textA);
+      await sendPacket(35, 47, textB);
+      await sendPacket(1, 0, "\x11");
+      return text;
+    }
+
+
+    input.addEventListener('change', async () => {
+      renderOutput(await renderText(stringToUnicodeCodePoint(input.value) || " "));
+    });
+
+    function renderOutput(text) {
+      output.innerHTML = text;
+    }
+
+  </script>
+  <script>
+
+    let port = null;
+    let writer = null;
+    let reader = null;
+    let readBuffer = "";
+    let decoder = new TextDecoder();
+
+    function asciiBytes(str) {
+      const bytes = new Uint8Array(str.length);
+      for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i) & 0xFF;
+      return bytes;
+    }
+
+    async function connect() {
+      if (!('serial' in navigator)) {
+        alert("WebSerial non supporté dans ce navigateur.");
+        return;
+      }
+
+      port = await navigator.serial.requestPort();
+      await port.open({ baudRate: 115200 });
+
+      writer = port.writable.getWriter();
+      reader = port.readable.getReader();
+      input.removeAttribute("disabled");
+      inputBrut1.removeAttribute("disabled");
+      inputBrut2.removeAttribute("disabled");
+      inputBrut3.removeAttribute("disabled");
+      
+
+      document.getElementById("btnBrut1").removeAttribute("disabled");
+      document.getElementById("btnBrut2").removeAttribute("disabled");
+      document.getElementById("btnBrut3").removeAttribute("disabled");
+      document.getElementById("brightness").removeAttribute("disabled");
+      document.getElementById("btnDefiler").removeAttribute("disabled");
+      document.getElementById("btnHeure").removeAttribute("disabled");
+      document.getElementById("btnFlag").removeAttribute("disabled");
+      document.getElementById("btnDisconnect").removeAttribute("disabled");
+      document.getElementById("btnDisconnect").style.color = "lightcoral";
+
+
+    }
+
+    async function readOneLineWithTimeout(timeoutMs = 1200) {
+      const t0 = performance.now();
+      while (performance.now() - t0 < timeoutMs) {
+        // Si une ligne est déjà dans le buffer, on la prend tout de suite
+        const idx = readBuffer.indexOf('\n');
+        if (idx !== -1) {
+          const line = readBuffer.slice(0, idx).trim();
+          readBuffer = readBuffer.slice(idx + 1);
+          return line;
+        }
+
+        // Sinon, on lit des nouveaux octets
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) readBuffer += decoder.decode(value, { stream: true });
+      }
+      return null; // timeout
+    }
+
+
+    async function sendPacketAndWaitAck(packet, maxTries = 20) {
+      let ack = false;
+      let attempt = 1;
+
+      while ((attempt <= maxTries) && (!ack)) {
+        await writer.write(packet);
+
+        // Lecture UNIQUE: on attend soit ACK soit NAK, puis on s'arrête.
+        const line = await readOneLineWithTimeout(1500);
+
+        if (line === "ACK") {
+          ack = true;
+          return true;
+        }
+
+        if (line == null) { }
+        if (line === "NAK") { }
+        attempt++;
+      };
+
+      return ack;
+    }
+
+
+    async function sendPacket(len, pos, payloadStr) {
+      if (!writer) {
+        alert("Connecte d'abord le port série.");
+        return;
+      }
+
+      // Vérifs taille payload
+      if (payloadStr.length !== len) {
+        alert(`Le payload doit faire exactement ${len} caractères. Actuel: ${payloadStr.length}`);
+        return;
+      }
+
+      const payload = asciiBytes(payloadStr);
+
+      // Trame:
+      // [0xAA][len][pos_hi][pos_lo][payload...][checksum]
+      const start = 0xAA;
+      const posHi = (pos >> 8) & 0xFF;
+      const posLo = pos & 0xFF;
+
+      // checksum XOR de [len, pos_hi, pos_lo, payload...]
+
+      let chk = 0;
+      chk ^= len;
+      chk ^= posHi;
+      chk ^= posLo;
+      for (let b of payload) chk ^= b;
+
+
+      const packet = new Uint8Array(1 + 3 + payload.length + 1);
+      packet[0] = start;
+      packet[1] = len;
+      packet[2] = posHi;
+      packet[3] = posLo;
+      packet.set(payload, 4);
+      packet[4 + payload.length] = chk;
+
+      // Envoi
+
+      await sendPacketAndWaitAck(packet);
+
+    }
+
+    let timer = null;
+    let inputText = "";
+
+    function ensureTimer() {
+      if (timer) return;
+
+      timer = setInterval(() => {
+        if (input.value.length > 0) {
+          input.value = input.value.slice(1); // retire le 1er caractère
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        } else {
+          clearInterval(timer);
+          timer = null;
+        }
+      }, 160);
+    }
+
+
+    function defiler() {
+      if (input.value != "" && input.value != " ") {
+        inputText = input.value;
+      } else {
+        input.value = inputText;
+      }
+      input.value = '          ' + input.value;
+      ensureTimer();
+    };
+
+    let heureActive = false;
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    let milli = 1000;
+
+    function updateTime() {
+      const now = new Date();
+      const h = pad2(now.getHours());
+      const m = pad2(now.getMinutes());
+      const s = pad2(now.getSeconds());
+
+      input.value = ` ${h}:${m}:${s}`;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+
+      const milli = 1000 - now.getUTCMilliseconds();
+
+
+      if (heureActive) setTimeout(updateTime, milli);
+    }
+
+    function heure() {
+      heureActive = !heureActive;
+      if (heureActive) updateTime();
+    };
+
+
+    const brightness = document.getElementById('brightness');
+
+    function luminosite() {
+      sendPacket(1, 2, String.fromCharCode(brightness.value));
+    }
+
+
+
+
+
+
+    const select = document.getElementById("itemSelect");
+
+    Object.keys(tableau).forEach(key => {
+      const option = document.createElement("option");
+
+      option.value = key;
+      option.textContent = `${key} : ${tableau[key]["name"]}`;
+
+      select.appendChild(option);
+    });
+
+    async function sendFlag() {
+      renderOutput(await renderFlag(flagCodeToStringRGB(select.value)));
+    }
+
+
+    async function sendBrut(text) {
+      const textA = (text.slice(0, 35)).split("").reverse().join("");;
+      const textB = text.slice(35, 70);
+
+      await sendPacket(1, 0, "\x22");
+      await sendPacket(35, 0, textA);
+      await sendPacket(35, 47, textB);
+      await sendPacket(1, 0, "\x11");
+    }
+
+    async function brut1() {
+      await sendBrut(inputBrut1.value);
+    }
+
+    async function brut2() {
+      await sendBrut(inputBrut2.value);
+    }
+    async function brut3() {
+      await sendBrut(inputBrut3.value);
+    }
+
+    document.getElementById('btnConnect').addEventListener('click', connect);
+    document.getElementById('btnDefiler').addEventListener('click', defiler);
+    document.getElementById('btnHeure').addEventListener('click', heure);
+    document.getElementById('btnFlag').addEventListener('click', sendFlag);
+    brightness.addEventListener('change', luminosite);
+
+    document.getElementById('btnBrut1').addEventListener('click', brut1);
+    document.getElementById('btnBrut2').addEventListener('click', brut2);
+    document.getElementById('btnBrut3').addEventListener('click', brut3);
+
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang= en>
+<head>
+    <meta charset= UTF-8>
+    <meta name= viewport content="width=device-width, initial-scale=1.0">
+    <meta name= color-scheme content= dark>
+    <title>Homepage of Unicode 5x7 DotMatrix</title>
+    <style>
+        a {
+            display: inline-block;
+            /*border: 1px solid white;*/
+            padding: 15px;
+            width:250px;
+            text-decoration: none;
+            color:inherit;
+            height: 120px;
+           box-shadow: rgba(0, 0, 0, 0.3) 0px 4px 2px,  rgba(0, 0, 0, 0.3) 10px 15px 16px, inset rgba(255, 255, 255, 0.05) 6px 6px 2px,  inset rgba(0, 0, 0, 0.3) -6px -6px 2px;
+            /*background-color: white;*/
+            /*border: 1px solid dimgray;*/
+            text-align: center;
+            margin:10px;
+
+            p {
+                display: inline-block;
+                margin-top: 15px;
+                margin-bottom: 25px;
+                font-size: 50px;
+                line-height: 1.2em;
+            }
+            
+
+            &:hover, &:focus{
+                /*scale: 1.1;
+                transform-origin: 0% 50%;*/
+                transition-duration: 0.2s;
+                /*border: 1px solid gold;*/
+                box-shadow: rgba(0, 0, 0, 0.3) 0px 4px 2px,  rgba(0, 0, 0, 0.3) 15px 20px 16px, inset rgba(255, 255, 255, 0.05) 6px 6px 2px,  inset rgba(0, 0, 0, 0.3) -6px -6px 2px;
+                color: gold;
+                background-color: alpha(from gold / 0.05);
+
+                img, p {
+                    scale: 1.1;
+                     transform-origin: 50% 100%;
+                    transition-duration: 0.2s;
+                }
+            }
+
+            &:active{
+                color: darkgoldenrod;
+                 box-shadow: rgba(0, 0, 0, 0.3) 0px 4px 2px,  rgba(0, 0, 0, 0.3) 5px 10px 16px, inset rgba(0, 0, 0, 0.3) 8px 8px 0px,  inset rgba(255, 255, 255, 0.02) -8px -8px 0px;
+            }
+
+            img {
+                height: 100px;
+                width:200px;
+                object-fit: cover;
+                margin-bottom: 5px;
+            }
+        }
+
+        div {
+            display: inline-block;
+            margin: 10px;
+
+            & > * {
+                vertical-align: middle;
+            }
+        }
+
+    </style>
+</head>
+<body style="font-family: sans-serif;">
+    
+    <h1>Unicode 5x7 DotMatrix</h1>
+    by DjesonPV<br>
+
+    <div>
+        <h2>Go to Library</h2>
+        <a href="/Library.html"><img src="/library illustration.png"><br>Library</a>
+
+    </div>
+
+    <br>
+
+    <div>
+        <h2>Quick views</h2>
+        <a href="/Pictures Symbols.html"><img src="/pictures symbols illustration.png"><br>Unicode Pictures</a>
+        <a href="/Picture Flags.html"><img src="/picture flags illustration.png"><br>Flags Picture</a>
+        
+
+    </div>
+    
+    <br>
+    
+    <div>
+        <h2>See json files</h2>
+        <a href="/unicode.json"><p>{.json}</p><br>unicode.json</a>
+        <a href="/flags.json"><p>{.json}</p><br>flags.json</a>
+
+    </div>
+    <div>
+        <h2>Helpers</h2>
+        <a href="/Editor.html"><p>🎨</p><br>Editor</a>
+        <a href="/Controls.html"><p>🎚️</p><br>Control panel</a>
+
+    </div>
+    
+</body>
+</html>

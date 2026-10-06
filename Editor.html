@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang= fr>
+
+<head>
+  <meta charset=utf-8>
+  <meta name= viewport content="width=device-width,initial-scale=1">
+  <meta name= color-scheme content= dark>
+  <title>Editor</title>
+  <style>
+
+    body {
+      font-family: system-ui, Arial;
+      margin: 16px;
+    }
+
+    .wrap {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    canvas {
+      margin-top: 10px;
+      border: 1px solid #333;
+    }
+
+    #palette {
+      display: grid;
+      margin-top: 10px;
+      grid-template-columns: repeat(11, 1fr);
+      gap: 6px;
+    }
+
+    .swatch {
+      width: 20px;
+      height: 20px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+
+      &.active {
+        border: 1px solid #0008;
+        box-shadow: 0px 0px 1px 1px #fff;
+      }
+    }
+
+    #output {
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 10px;
+      overflow: auto;
+      resize: both;
+      min-height: 120px;
+    width: 320px;
+      font-family: monospace;
+      font-size: x-small;
+      line-height: 1.5;
+      margin-top: 10px;
+
+      :root:has(#mode option[value="text"]:checked) &{
+        /*min-width: 165px;*/
+        width: 165px;
+      }
+    }
+
+    .coloredLabel {
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      display: inline-block;
+    }
+
+    #mouseColor {
+      position: fixed;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #000;
+      border: 1px solid #0008;
+      box-shadow: 0px 0px 1px 1px #fff;
+      left: 0;
+      top: 0;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 9999;
+
+    }
+  </style>
+</head>
+
+<body>
+  <label class= label for= mode >Editor: </label>
+  <select id= mode >
+      <option>Flag</option>
+      <option value= text >Symbol</option>
+  </select>
+  <br><br>
+
+  <div class=wrap>
+
+    <div style=width:fit-content>
+      <b>Palette</b>
+      <div id=palette></div>
+      <br>
+      <span id= selectedColor class= coloredLabel style= font-family:monospace></span>
+      <br><br>
+    </div>
+    
+    <div>
+      <b>Canvas</b>
+      <br>
+      <canvas id= canvas width= 400 height= 280 style= cursor:pointer view-box="0 0 200 140"></canvas>
+      <br><br>
+      <button type= button id= reset style="cursor:pointer; color:lightcoral; width: 70px; height: 40px;">Reset</button>
+      <br>
+      <br>
+      <button type= button id= copy style="cursor:pointer; width: 200px; height:50px;" >Copy to clipboard</button>
+    </div>
+
+    <div>
+      <b>Output</b>
+      <div id= output style="white-space: pre-wrap;"></div>
+      <br>
+      <input type id="outputSOT" value="[" size=5>
+      <label for="outputSOT">Start of Table</label>
+      <br>
+      <input type id="outputTOT" value=", " size=5>
+      <label for="outputTOT" >Line Separator</label>
+      <br>
+      <input type id="outputEOT" value="]," size=5>
+      <label for="outputEOT">End of Table</label>
+      <br>
+      <input type id="outputSOL" value="[" size=5>
+      <label for="outputSOL">Start of Line</label>
+      <br>
+      <input type id="outputTOL" value=", " size=5>
+      <label for="outputTOL">Column Separator</label>
+      <br>
+      <input type id="outputEOL" value="]" size=5>
+      <label for="outputEOL">End of Line</label>
+      
+      <br>
+      <label class= label for= outputMode >Mode: </label>
+      <select id="outputMode">
+        <option>Number</option>
+      <option value= code >Code</option>
+      </select>
+
+      <label class= label for= outputSize > </label>
+      <select id="outputSize">
+        <option>1x 10x7</option>
+      <option value= split >2x 5x7</option>
+      </select>
+
+    </div>
+
+  </div>
+
+  <div id= mouseColor></div>
+
+  <script>
+
+    const palette = {
+      0: { hex: "#333", name: "Black",      code: 'o' },
+      1: { hex: "#802", name: "Brown",      code: 'a' },
+      2: { hex: "#f04", name: "Red",        code: 'b' },
+      3: { hex: "#f60", name: "Orange",     code: 'c' },
+      4: { hex: "#fb0", name: "Yellow",     code: 'd' },
+      5: { hex: "#190", name: "Green",      code: 'e' },
+      6: { hex: "#0af", name: "Light Blue", code: 'f' },
+      7: { hex: "#02d", name: "Dark Blue",  code: 'g' },
+      8: { hex: "#888", name: "Gray",       code: 'h' },
+      9: { hex: "#fff", name: "White",      code: 'i' },
+      "-1": { hex: "#303", name: "Off",     code: '0' },
+    };
+
+    const paletteMono = {
+      0: { hex: "#333", name: "Off",       code: '0' },
+      1: { hex: "#f60", name: "Monochrom", code: 'z' },
+    };
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const FLAG_COLS = 10;
+    const FLAG_ROWS = 7
+    const DOT_RATIO = 0.42;
+
+    const CANVAS_W = canvas.getAttribute('width');
+    const CANVAS_H = canvas.getAttribute('height');
+
+    const CELL_W = CANVAS_W / FLAG_COLS;
+    const CELL_H = CANVAS_H / FLAG_ROWS;
+
+
+    const modeSelector = document.getElementById("mode");
+
+    modeSelector.addEventListener("change", () => {
+      if (modeSelector.value == "text") buildPaletteUI(paletteMono); else buildPaletteUI(palette);
+      reset();
+      drawFlag();
+      renderOutput();
+    })
+
+    const flag = Array.from({ length: FLAG_ROWS }, () => Array(FLAG_COLS).fill(0));
+
+
+    const selector = document.getElementById("palette");
+    const selectedColorLabel = document.getElementById("selectedColor");
+    const copyButton = document.getElementById("copy");
+    const resetButton = document.getElementById("reset");
+    const output = document.getElementById("output");
+    const mouseColor = document.getElementById('mouseColor');
+
+    let selectedColor = 0;
+
+    function xyCoordFlag(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      const col = Math.min(FLAG_COLS - 1, Math.max(0, Math.floor(x / rect.width * FLAG_COLS)));
+      const row = Math.min(FLAG_ROWS - 1, Math.max(0, Math.floor(y / rect.height * FLAG_ROWS)));
+      return { col, row };
+    }
+    let selectedPalette = palette;
+
+    function drawFlag() {
+      ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+      const radius = Math.min(CELL_W, CELL_H) * DOT_RATIO;
+
+      flag.forEach((rows, row) => {
+        rows.forEach((cols, col) => {
+          if (modeSelector.value == "text" && col> 4) return; // TEXT MODE
+          const cx = col * CELL_W + CELL_W / 2;
+          const cy = row * CELL_H + CELL_H / 2;
+          
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+          
+          ctx.fillStyle = selectedPalette[flag[row][col]].hex;
+          ctx.fill();
+          
+          ctx.strokeStyle = "rgba(0,0,0,0.25)";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          
+        });
+      });
+      renderOutput();
+    }
+
+    function textConstrastedColor(hex) {
+      const full = hex.length == 4 ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}` : hex;
+
+      const r = parseInt(full[1] + full[2], 16);
+      const g = parseInt(full[3] + full[4], 16);
+      const b = parseInt(full[5] + full[6], 16);
+
+      const lum = 0.2 * r + 0.7 * g + 0.1 * b;
+      return lum > 180 ? "#000000" : "#ffffff";
+    }
+
+    function renderOutput() {
+
+      function renderValue(row, col) {
+        let html = "";
+         const num = flag[row][col];
+            const color = selectedPalette[num].hex;
+            const textColor = textConstrastedColor(color);
+            
+            html += `<span class= coloredLabel style= background:${selectedPalette[num].hex};color:${textColor}>${outputMode.value=="code"?selectedPalette[num].code:num}</span>`;
+            if (modeSelector.value == "text") {if (col <4) { html += outputTOL.value;}}
+            else if (col < FLAG_COLS - 1) { html += outputTOL.value;};
+          return html;
+      }
+
+
+      if (outputSize.value == "split") {
+        let html = outputSOT.value;
+        for (let row = 0; row < 7; row++){
+          html += outputSOL.value;
+          for (let col = 0; col < 5; col++){
+            if (modeSelector.value == "text" && col> 4) return; // TEXT MODE
+           html+= renderValue(row,col);
+          };
+          html += outputEOL.value;
+          if (row < 4) html += outputTOT.value;
+        };
+         html += outputEOT.value;
+         html += outputSOT.value;
+         for (let row = 0; row < 7; row++){
+          html += outputSOL.value;
+          for (let col = 5; col < 10; col++){
+            if (modeSelector.value == "text" && col> 4) return; // TEXT MODE
+           html+= renderValue(row,col);
+          };
+          html += outputEOL.value;
+          if (row < 4) html += outputTOT.value;
+        };
+        html += outputEOT.value;
+        output.innerHTML = html;
+      } else {
+        let html = outputSOT.value;
+        flag.forEach((rows, row) => {
+          html += outputSOL.value;
+          rows.forEach((cols, col) => {
+            if (modeSelector.value == "text" && col> 4) return; // TEXT MODE
+            html+= renderValue(row, col);
+          });
+          
+          html += outputEOL.value;
+          if (row < FLAG_ROWS - 1) html += outputTOT.value;
+        });
+        html += outputEOT.value;
+        output.innerHTML = html;
+      }
+    }
+      
+      function selectColor(num) {
+        selectedColor = parseInt(num);
+        
+        selectedColorLabel.textContent = selectedPalette[selectedColor].name;
+      selectedColorLabel.style.backgroundColor = selectedPalette[selectedColor].hex;
+      selectedColorLabel.style.color = textConstrastedColor(selectedPalette[selectedColor].hex);
+
+      mouseColor.style.backgroundColor = selectedPalette[selectedColor].hex;
+
+      selector.querySelectorAll(".swatch").forEach(el => {
+        el.classList.toggle("active", el.dataset.key == selectedColor);
+      });
+    }
+
+    function buildPaletteUI(palette) {
+      selectedPalette = palette;
+      selector.innerHTML = "";
+      for (let key in palette) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = "swatch";
+        b.style.background = palette[key].hex;
+        b.dataset.key = parseInt(key);
+        b.title = palette[key].name;
+        b.addEventListener('click', () => selectColor(key));
+        selector.appendChild(b);
+      };
+      selectColor(0);
+    }
+
+    function applyAt(col, row) {
+      flag[row][col] = selectedColor;
+      drawFlag();
+    }
+
+    function reset() {
+      flag.forEach((rows, row) => { rows.forEach((cols, col) => { flag[row][col] = 0 }); });
+      drawFlag();
+    }
+
+    let isMouseDown = false;
+
+    canvas.addEventListener('mousedown', (e) => {
+      isMouseDown = true;
+      const { col, row } = xyCoordFlag(e);
+      if (modeSelector.value == "text") {if (flag[row][col] == 0) selectedColor = 1; else selectedColor = 0;};
+      applyAt(col, row);
+    });
+
+    window.addEventListener('mouseup', () => { isMouseDown = false; });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isMouseDown) return;
+      const { col, row } = xyCoordFlag(e);
+      applyAt(col, row);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      mouseColor.style.left = e.clientX + 'px';
+      mouseColor.style.top = e.clientY + 'px';
+    });
+
+    resetButton.addEventListener('click', reset);
+
+    //copy output to clipboard
+    copyButton.addEventListener('click', async () => {
+
+      const text = output.innerText;
+
+      try {
+        await navigator.clipboard.writeText(text);
+        copyButton.textContent = "Copied !";
+        setTimeout(() => (copyButton.textContent = "Copy to clipboard"), 1000);
+      } catch (e) {
+         copyButton.textContent = "Error";
+      }
+    });
+
+
+
+
+    buildPaletteUI(palette);
+    drawFlag();
+
+  </script>
+</body>
+
+</html>
